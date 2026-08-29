@@ -90,10 +90,11 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--ember);outline-
 
 .tabs{display:flex;padding:0 8px;gap:2px;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
-.tab{flex:1;min-width:88px;padding:11px 6px 9px;font-weight:800;font-size:13.5px;color:var(--ink3);border-bottom:3px solid transparent;white-space:nowrap;text-align:center}
-.tab .n{font-size:11px;opacity:.8;font-variant-numeric:tabular-nums}
+.tab{flex:1;min-width:88px;padding:14px 6px 11px;font-weight:800;font-size:16.5px;color:var(--ink3);border-bottom:4px solid transparent;white-space:nowrap;text-align:center}
+.tab .n{font-size:13px;opacity:.8;font-variant-numeric:tabular-nums}
 .tab[aria-selected="true"]{color:var(--ink)}
 .tab[aria-selected="true"].tb-bad{border-color:var(--bad);color:var(--bad)}
+.tab[aria-selected="true"].tb-cc{border-color:var(--cc);color:var(--cc)}
 .tab[aria-selected="true"].tb-ok{border-color:var(--ok);color:var(--ok)}
 .tab[aria-selected="true"].tb-mod{border-color:var(--mod);color:var(--mod)}
 .tab[aria-selected="true"].tb-unk{border-color:var(--unk);color:var(--unk)}
@@ -113,10 +114,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--ember);outline-
 .rows.asgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:10px}
 @media(min-width:700px){.rows.asgrid{grid-template-columns:repeat(3,1fr)}}
 @media(min-width:1100px){.rows.asgrid{grid-template-columns:repeat(4,1fr)}}
-.rows.asgrid .row{flex-direction:column;align-items:stretch;text-align:center;gap:8px;margin-bottom:0;padding:16px 12px;min-height:23svh;justify-content:center;position:relative}
-.rows.asgrid .row .stx{width:58px;height:58px;font-size:28px;margin:0 auto}
-.rows.asgrid .row .nm{font-size:16.5px;line-height:1.2;display:block;text-wrap:balance}
-.rows.asgrid .row .why{font-size:12.5px;margin-top:4px}
+.rows.asgrid .row{flex-direction:column;align-items:stretch;text-align:center;gap:8px;margin-bottom:0;padding:16px 12px;min-height:20svh;justify-content:center;position:relative}
+.rows.asgrid .row .stx{width:64px;height:64px;font-size:32px;margin:0 auto;border-radius:18px}
+.rows.asgrid .row .nm{font-size:18px;line-height:1.18;display:block;text-wrap:balance;font-weight:900}
+.rows.asgrid .row .why{font-size:13px;margin-top:4px;line-height:1.3}
 .rows.asgrid .row .pr{position:absolute;top:10px;right:12px;margin:0;padding:0;font-size:13px}
 .rows.asgrid .gempty{grid-column:1/-1}
 .sx-ok{color:var(--ok);border-color:var(--ok);background:var(--ok-bg)}
@@ -210,7 +211,6 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--ember);outline-
       <div class="t2">
         <button class="back" id="back">← Edit</button>
         <div class="selsum" id="selsum"></div>
-        <button class="viewtg" id="viewtg" aria-label="Switch layout">⊞ Cards</button>
         <button class="resetb" id="reset">⟲ Reset</button>
       </div>
       <div class="tabs" role="tablist" id="tabs"></div>
@@ -326,19 +326,13 @@ const S={
  bad:{sev:5,cls:'b-bad',sx:'sx-bad',icon:'✕',label:'Contains / conflicts'},
 };
 const TABS=[
- {id:'avoid', cls:'tb-bad', name:"Can't eat", sts:['bad','cc','may','unk'],
-  note:'⬢✕ Everything with a recorded conflict, cross-contact risk, supplier precaution, or incomplete data — the conservative list.'},
- {id:'ok', cls:'tb-ok', name:'No conflict', sts:['ok'],
-  note:'○✓ No recorded conflict for every selected restriction. Not a guarantee — recorded data only.'},
- {id:'mod', cls:'tb-mod', name:'Modifiable', sts:['mod'],
-  note:'◇🔧 Eligible only with the listed change — always confirm the modification with the kitchen.'},
- {id:'unk', cls:'tb-unk', name:'Unverified', sts:['unk'],
-  note:'▢? Ingredient or preparation data incomplete or not recently verified. Unknown is never treated as safe.'},
- {id:'all', cls:'tb-all', name:'All', sts:['bad','cc','may','unk','mod','ok'],
-  note:'Every dish, worst recorded status first.'},
+ {id:'contains', cls:'tb-bad', name:'⬢✕ Contains', sts:['bad'],
+  note:'Recorded conflict with a selected restriction. Dishes not shown on either tab have no recorded issue — recorded data only, never a guarantee.'},
+ {id:'maycontain', cls:'tb-cc', name:'△! May contain', sts:['cc','may','unk'],
+  note:'Cross-contact risk, supplier “may contain” precaution, or incomplete/unverified data. Unknown is never treated as OK.'},
 ];
 
-let selected=new Set(), rquery='', tab='avoid', openDish=null, layout='grid';
+let selected=new Set(), rquery='', tab='contains', openDish=null;
 
 const io=('IntersectionObserver' in window)?new IntersectionObserver(es=>{
   es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});
@@ -397,16 +391,17 @@ function renderResults(){
   const T=TABS.find(t=>t.id===tab);
   document.getElementById('tabnote').textContent=T.note;
   const list=T.sts.flatMap(s=>buckets[s].map(d=>({d,s})));
-  if(tab==='all') list.sort((a,b)=>S[b.s].sev-S[a.s].sev);
+  list.sort((a,b)=>S[b.s].sev-S[a.s].sev);
+  const nOk=buckets.ok.length+buckets.mod.length;
   const rowsEl=document.getElementById('rows');
-  rowsEl.classList.toggle('asgrid',layout==='grid');
-  document.getElementById('viewtg').innerHTML=layout==='grid'?'☰ <b>List</b>':'⊞ <b>Cards</b>';
-  rowsEl.innerHTML=list.length===0
-   ? `<div class="gempty">Nothing in this tab for the current selection.</div>`
+  rowsEl.classList.add('asgrid');
+  rowsEl.innerHTML=(list.length===0
+   ? `<div class="gempty">Nothing recorded here for the current selection.</div>`
    : list.map(({d,s})=>`<button class="row rv" data-d="${d.id}">
       <span class="stx ${S[s].sx}" aria-label="${S[s].label}">${S[s].icon}</span>
-      <span><span class="nm">${d.name}</span>${layout==='grid'?'':'<br>'}<span class="why">${esc(worstReason(d))}${layout==='grid'?'':' · tap for why'}</span></span>
-      <span class="pr">$${d.price.toFixed(2)}</span></button>`).join('');
+      <span><span class="nm">${d.name}</span><span class="why">${esc(worstReason(d))}</span></span>
+      <span class="pr">$${d.price.toFixed(2)}</span></button>`).join(''))
+   +`<div class="gempty" style="grid-column:1/-1;padding:18px 12px;font-size:13px">✓ ${nOk} other dish${nOk===1?'':'es'} have no recorded issue for this selection and are not listed. Recorded data only — confirm with the kitchen.</div>`;
   document.querySelectorAll('.row').forEach(b=>b.onclick=()=>{openDish=b.dataset.d;renderSheet();});
   reveal(document.getElementById('rows'));
 }
@@ -440,10 +435,9 @@ function renderSheet(){
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));
   document.querySelector('#'+id+' .content').scrollTop=0;}
 document.getElementById('rq').addEventListener('input',e=>{rquery=e.target.value;renderGrid();});
-document.getElementById('go').onclick=()=>{if(selected.size){tab='avoid';renderResults();show('s2');}};
+document.getElementById('go').onclick=()=>{if(selected.size){tab='contains';renderResults();show('s2');}};
 document.getElementById('back').onclick=()=>{renderGrid();syncS1();show('s1');};
-document.getElementById('viewtg').onclick=()=>{layout=layout==='grid'?'list':'grid';renderResults();};
-document.getElementById('reset').onclick=()=>{selected=new Set();rquery='';tab='avoid';openDish=null;
+document.getElementById('reset').onclick=()=>{selected=new Set();rquery='';tab='contains';openDish=null;
   document.getElementById('rq').value='';renderSheet();renderGrid();syncS1();show('s1');};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&openDish){openDish=null;renderSheet();}});
 renderGrid();syncS1();
