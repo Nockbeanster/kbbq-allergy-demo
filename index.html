@@ -1,0 +1,431 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="robots" content="noindex"><title>KBBQ Allergy Menu Assistant — Demo</title>
+<style>
+:root{
+  --bg:#101215; --panel:#1a1d22; --panel2:#22262d; --line:#2e333b; --ink:#eceef1; --ink2:#9aa3ad; --ink3:#6b737e;
+  --ember:#ff8a50; --ember-ink:#191008;
+  --ok:#57c7a3; --mod:#5bc8f5; --cc:#e8b04b; --bad:#e0637c; --unk:#8b93a0;
+  --ok-bg:rgba(87,199,163,.12); --mod-bg:rgba(91,200,245,.12); --cc-bg:rgba(232,176,75,.13); --bad-bg:rgba(224,99,124,.13); --unk-bg:rgba(139,147,160,.12);
+  --shadow:0 8px 28px rgba(0,0,0,.4);
+}
+@media (prefers-color-scheme: light){:root{
+  --bg:#f4f5f7; --panel:#ffffff; --panel2:#eceef1; --line:#d8dce2; --ink:#1c1f24; --ink2:#565e69; --ink3:#8a919b;
+  --ember:#d9622b; --ember-ink:#fff6f0;
+  --ok:#177a5c; --mod:#0b7fae; --cc:#8a6410; --bad:#b23a55; --unk:#5d6570;
+  --ok-bg:rgba(23,122,92,.09); --mod-bg:rgba(11,127,174,.08); --cc-bg:rgba(138,100,16,.10); --bad-bg:rgba(178,58,85,.08); --unk-bg:rgba(93,101,112,.09);
+  --shadow:0 8px 28px rgba(20,25,35,.12);
+}}
+:root[data-theme="dark"]{
+  --bg:#101215; --panel:#1a1d22; --panel2:#22262d; --line:#2e333b; --ink:#eceef1; --ink2:#9aa3ad; --ink3:#6b737e;
+  --ember:#ff8a50; --ember-ink:#191008;
+  --ok:#57c7a3; --mod:#5bc8f5; --cc:#e8b04b; --bad:#e0637c; --unk:#8b93a0;
+  --ok-bg:rgba(87,199,163,.12); --mod-bg:rgba(91,200,245,.12); --cc-bg:rgba(232,176,75,.13); --bad-bg:rgba(224,99,124,.13); --unk-bg:rgba(139,147,160,.12);
+  --shadow:0 8px 28px rgba(0,0,0,.4);
+}
+:root[data-theme="light"]{
+  --bg:#f4f5f7; --panel:#ffffff; --panel2:#eceef1; --line:#d8dce2; --ink:#1c1f24; --ink2:#565e69; --ink3:#8a919b;
+  --ember:#d9622b; --ember-ink:#fff6f0;
+  --ok:#177a5c; --mod:#0b7fae; --cc:#8a6410; --bad:#b23a55; --unk:#5d6570;
+  --ok-bg:rgba(23,122,92,.09); --mod-bg:rgba(11,127,174,.08); --cc-bg:rgba(138,100,16,.10); --bad-bg:rgba(178,58,85,.08); --unk-bg:rgba(93,101,112,.09);
+  --shadow:0 8px 28px rgba(20,25,35,.12);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 "Segoe UI",system-ui,-apple-system,sans-serif;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;padding:0}
+input{font:inherit}
+button:focus-visible,input:focus-visible{outline:2px solid var(--ember);outline-offset:2px}
+
+/* ============ app frame: full-height screens, top bar + content + bottom bar ============ */
+.screen{position:fixed;inset:0;display:none;flex-direction:column;background:var(--bg)}
+.screen.on{display:flex}
+.topbar{flex:none;background:var(--panel);border-bottom:1px solid var(--line)}
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.botbar{flex:none;background:var(--panel);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+.maxw{max-width:1100px;margin:0 auto;width:100%}
+
+.demo{background:var(--ember);color:var(--ember-ink);font-weight:800;font-size:11px;letter-spacing:.05em;text-align:center;padding:4px 10px;text-transform:uppercase}
+
+/* ============ screen 1: choose allergens ============ */
+.t1{display:flex;align-items:center;gap:10px;padding:10px 14px 6px}
+.t1 .step{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ember)}
+.t1 h1{margin:0;font-size:19px;font-weight:800;letter-spacing:.01em}
+.t1 .cnt{margin-left:auto;font-size:13px;font-weight:800;color:var(--ink2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.t1 .cnt b{color:var(--ember);font-size:16px}
+.searchrow{padding:0 14px 10px}
+.rsearch{width:100%;background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:11px 14px;font-size:16px;color:var(--ink)}
+.rsearch::placeholder{color:var(--ink3)}
+
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:8px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:1100px){.grid{grid-template-columns:repeat(5,1fr)}}
+/* each card ≈ 20% of the screen: 2-up × ~20svh tall on phones */
+.rcard{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  min-height:20svh;padding:10px;border:2px solid var(--line);background:var(--panel);border-radius:18px;
+  transition:transform .12s ease,border-color .12s,background .12s;text-align:center;overflow:hidden}
+@media(min-width:700px){.rcard{min-height:24vh}}
+.rcard:active{transform:scale(.965)}
+.rcard .ric{font-size:clamp(44px,9svh,72px);line-height:1}
+.rcard .rnm{font-weight:800;font-size:15px;line-height:1.15;text-wrap:balance}
+.rcard .rgk{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);font-weight:800}
+.rcard[aria-pressed="true"]{border-color:var(--ember);background:linear-gradient(180deg,var(--panel),var(--panel2))}
+.rcard[aria-pressed="true"] .rnm{color:var(--ember)}
+.rcard .tick{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:999px;background:var(--ember);color:var(--ember-ink);
+  font-size:15px;font-weight:900;display:none;align-items:center;justify-content:center}
+.rcard[aria-pressed="true"] .tick{display:flex}
+.gempty{padding:40px 20px;text-align:center;color:var(--ink3)}
+
+.gobtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:var(--ember);color:var(--ember-ink);
+  font-weight:900;font-size:17px;border-radius:14px;padding:15px;transition:opacity .15s,transform .1s}
+.gobtn:active{transform:scale(.98)}
+.gobtn[disabled]{opacity:.35;cursor:not-allowed}
+.microdisc{font-size:10.5px;color:var(--ink3);text-align:center;margin-top:6px}
+
+/* ============ screen 2: results ============ */
+.t2{display:flex;align-items:center;gap:8px;padding:10px 12px}
+.back{font-size:15px;font-weight:800;color:var(--ember);padding:6px 10px;border-radius:10px;background:var(--panel2);white-space:nowrap}
+.selsum{display:flex;gap:5px;overflow-x:auto;flex:1;scrollbar-width:none}
+.selsum::-webkit-scrollbar{display:none}
+.spill{flex:none;font-size:12px;font-weight:700;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px 10px;white-space:nowrap}
+.resetb{font-size:13px;font-weight:800;color:var(--bad);white-space:nowrap;padding:6px 8px}
+
+.tabs{display:flex;padding:0 8px;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1;min-width:88px;padding:11px 6px 9px;font-weight:800;font-size:13.5px;color:var(--ink3);border-bottom:3px solid transparent;white-space:nowrap;text-align:center}
+.tab .n{font-size:11px;opacity:.8;font-variant-numeric:tabular-nums}
+.tab[aria-selected="true"]{color:var(--ink)}
+.tab[aria-selected="true"].tb-bad{border-color:var(--bad);color:var(--bad)}
+.tab[aria-selected="true"].tb-ok{border-color:var(--ok);color:var(--ok)}
+.tab[aria-selected="true"].tb-mod{border-color:var(--mod);color:var(--mod)}
+.tab[aria-selected="true"].tb-unk{border-color:var(--unk);color:var(--unk)}
+.tab[aria-selected="true"].tb-all{border-color:var(--ember);color:var(--ember)}
+
+.tabnote{padding:9px 14px;font-size:12px;color:var(--ink2);background:var(--panel);border-bottom:1px solid var(--line)}
+.rows{padding:6px 8px 20px}
+.row{display:flex;gap:10px;align-items:center;width:100%;text-align:left;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--panel);margin-bottom:8px}
+.row:active{background:var(--panel2)}
+.row .stx{flex:none;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;border:2px solid}
+.sx-ok{color:var(--ok);border-color:var(--ok);background:var(--ok-bg)}
+.sx-mod{color:var(--mod);border-color:var(--mod);background:var(--mod-bg)}
+.sx-cc{color:var(--cc);border-color:var(--cc);background:var(--cc-bg)}
+.sx-bad{color:var(--bad);border-color:var(--bad);background:var(--bad-bg)}
+.sx-unk{color:var(--unk);border-color:var(--unk);background:var(--unk-bg);border-style:dashed}
+.row .nm{font-weight:800;font-size:15px}
+.row .why{font-size:12px;color:var(--ink2);margin-top:2px}
+.row .pr{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--ink2);font-size:13.5px;white-space:nowrap;align-self:flex-start;padding-top:2px}
+.foot2{padding:8px 16px 16px;font-size:11px;color:var(--ink3);text-align:center;max-width:60ch;margin:0 auto}
+
+/* status badge (detail) */
+.b{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;padding:2px 8px;border:1px solid;letter-spacing:.02em;white-space:nowrap}
+.b-ok{color:var(--ok);background:var(--ok-bg);border-color:var(--ok);border-radius:999px}
+.b-mod{color:var(--mod);background:var(--mod-bg);border-color:var(--mod);border-radius:4px}
+.b-cc{color:var(--cc);background:var(--cc-bg);border-color:var(--cc);border-radius:4px 4px 12px 12px}
+.b-bad{color:var(--bad);background:var(--bad-bg);border-color:var(--bad);border-radius:2px}
+.b-unk{color:var(--unk);background:var(--unk-bg);border:1px dashed var(--unk);border-radius:4px}
+
+/* dish detail sheet */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-height:84svh;overflow-y:auto;z-index:41;background:var(--panel);
+  border-radius:18px 18px 0 0;border-top:2px solid var(--ember);box-shadow:var(--shadow);animation:up .22s ease}
+@media(min-width:700px){.sheet{left:50%;transform:translateX(-50%);width:560px;right:auto}}
+@keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
+@media(min-width:700px){@keyframes up{from{transform:translate(-50%,30px);opacity:.4}to{transform:translateX(-50%);opacity:1}}}
+.sheet .inner{padding:16px 18px 24px}
+.sheet h2{margin:0 0 2px;font-size:20px;font-weight:900}
+.sheet .meta{color:var(--ink3);font-size:13px;margin-bottom:12px}
+.dclose{float:right;color:var(--ink3);font-size:22px;line-height:1;padding:4px 10px}
+.rescard{border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:10px;background:var(--bg)}
+.rescard .rt{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-weight:800;font-size:13.5px;flex-wrap:wrap}
+.path{font-size:12.5px;color:var(--ink2);overflow-x:auto;white-space:nowrap;padding-bottom:2px}
+.path b{color:var(--ink)}
+.path .arr{color:var(--ember);padding:0 4px}
+.note{font-size:12.5px;color:var(--ink2);margin-top:5px}
+.vdate{font-size:11.5px;color:var(--ink3);margin-top:5px}
+.kv{font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:var(--ink3);margin:14px 0 8px}
+.confirm{margin-top:12px;border:1px solid var(--cc);background:var(--cc-bg);border-radius:10px;padding:10px 13px;font-size:13px}
+
+.rv{opacity:0;transform:translateY(14px);transition:opacity .35s ease,transform .35s ease}
+.rv.in{opacity:1;transform:none}
+
+/* modern scroll-driven animations (2026 baseline): compositor-only transform/opacity,
+   progress tied to viewport entry via view(); IO fallback above covers older engines */
+@supports (animation-timeline: view()) {
+  .content{scroll-timeline:--scr block}
+  .screen{timeline-scope:--scr}
+  .rv,.rv.in{opacity:1;transform:none;transition:none;transition-delay:0s!important;
+    animation:rvin ease both;animation-timeline:view();animation-range:entry 0% entry 70%}
+  @keyframes rvin{from{opacity:0;transform:translateY(22px) scale(.975)}to{opacity:1;transform:none}}
+  .scrollbar-progress{position:absolute;left:0;right:0;bottom:-3px;height:3px;background:var(--ember);
+    transform-origin:0 50%;transform:scaleX(0);animation:pgrow linear both;animation-timeline:--scr;z-index:3}
+  @keyframes pgrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  .topbar{position:relative}
+}
+@media (prefers-reduced-motion: reduce){
+  .rv,.rv.in{opacity:1;transform:none;transition:none;animation:none}
+  .sheet{animation:none}.rcard{transition:none}.scrollbar-progress{animation:none;transform:scaleX(0)}
+}
+</style></head><body>
+
+<!-- ============ SCREEN 1 — choose allergens ============ -->
+<div class="screen on" id="s1">
+  <div class="topbar">
+    <div class="demo">⚠ Demo — fictional sample data, not any real restaurant</div>
+    <div class="maxw">
+      <div class="t1">
+        <div>
+          <div class="step">Step 1 of 2</div>
+          <h1>Choose allergens &amp; restrictions</h1>
+        </div>
+        <div class="cnt" id="cnt1"><b>0</b> selected</div>
+      </div>
+      <div class="searchrow"><input class="rsearch" id="rq" type="search" placeholder="🔍 Search — “dairy”, “shrimp”, “celiac”…" aria-label="Search restrictions"></div>
+    </div>
+  </div>
+  <div class="content"><div class="maxw"><div class="grid" id="grid"></div></div></div>
+  <div class="botbar"><div class="maxw">
+    <button class="gobtn" id="go" disabled>Show results →</button>
+    <div class="microdisc">Decision-support only — never a safety guarantee. Always confirm with the kitchen.</div>
+  </div></div>
+</div>
+
+<!-- ============ SCREEN 2 — results ============ -->
+<div class="screen" id="s2">
+  <div class="topbar">
+    <div class="demo">⚠ Demo — fictional data · results show recorded evidence only</div>
+    <div class="maxw">
+      <div class="t2">
+        <button class="back" id="back">← Edit</button>
+        <div class="selsum" id="selsum"></div>
+        <button class="resetb" id="reset">⟲ Reset</button>
+      </div>
+      <div class="tabs" role="tablist" id="tabs"></div>
+    </div>
+    <div class="scrollbar-progress" aria-hidden="true"></div>
+  </div>
+  <div class="tabnote" id="tabnote"></div>
+  <div class="content"><div class="maxw">
+    <div class="rows" id="rows"></div>
+    <div class="foot2"><b>Not a safety guarantee.</b> “No recorded conflict” means no conflict is recorded — not that none exists. Recipes and procedures change; follow the kitchen confirmation process for serious allergies. Unofficial prototype — not approved by any restaurant.</div>
+  </div></div>
+</div>
+
+<div id="sheetSlot"></div>
+
+<script>
+/* ---------- fictional published snapshot ---------- */
+const RESTRICTIONS = [
+  {id:'peanut', name:'Peanut', g:'Allergy', ic:'🥜', kw:'nut groundnut'},
+  {id:'tree_nuts', name:'Tree nuts', g:'Allergy', ic:'🌰', kw:'almond walnut cashew pecan pistachio hazelnut nut'},
+  {id:'egg', name:'Egg', g:'Allergy', ic:'🥚', kw:'eggs'},
+  {id:'milk', name:'Milk / Dairy', g:'Allergy', ic:'🥛', kw:'dairy lactose cheese butter'},
+  {id:'fish', name:'Fish', g:'Allergy', ic:'🐟', kw:'anchovy salmon cod seafood'},
+  {id:'crustaceans_molluscs', name:'Shellfish', g:'Allergy', ic:'🦐', kw:'crustaceans molluscs shrimp crab lobster squid oyster clam seafood'},
+  {id:'sesame', name:'Sesame', g:'Allergy', ic:'🌻', kw:'sesame oil seeds tahini'},
+  {id:'soy', name:'Soy', g:'Allergy', ic:'🫛', kw:'soya soybean tofu soy sauce'},
+  {id:'wheat_triticale', name:'Wheat', g:'Allergy', ic:'🌾', kw:'triticale flour bread'},
+  {id:'mustard', name:'Mustard', g:'Allergy', ic:'🌭', kw:'mustard seed'},
+  {id:'sulphites', name:'Sulphites', g:'Allergy', ic:'🍷', kw:'sulfites sulphur dioxide preservative'},
+  {id:'gluten_celiac', name:'Gluten / Celiac', g:'Medical — celiac', ic:'🚫', kw:'celiac coeliac gluten free wheat barley rye oats'},
+  {id:'garlic', name:'Garlic', g:'Preference', ic:'🧄', kw:'avoid allium'},
+  {id:'pork', name:'No pork', g:'Preference', ic:'🐖', kw:'halal pig'},
+  {id:'alcohol', name:'No alcohol', g:'Preference', ic:'🍶', kw:'wine mirin soju cooking'},
+];
+const V='Verified 2026-08-12 · label photo on file (demo)';
+const DISHES=[
+ {id:'bulgogi',name:'Beef Bulgogi',cat:'BBQ — Beef',price:18.99,
+  r:{soy:{s:'bad',p:'Beef Bulgogi → house marinade v3 → soy sauce (Brand A) → label: contains soy',v:V},
+     wheat_triticale:{s:'bad',p:'Beef Bulgogi → house marinade v3 → soy sauce (Brand A) → label: contains wheat',v:V},
+     gluten_celiac:{s:'bad',p:'Beef Bulgogi → house marinade v3 → soy sauce (Brand A) → wheat = gluten source',v:V},
+     sesame:{s:'bad',p:'Beef Bulgogi → house marinade v3 → sesame oil (Brand B) → contains sesame',v:V},
+     alcohol:{s:'bad',p:'Beef Bulgogi → house marinade v3 → cooking rice wine → contains alcohol',v:V},
+     garlic:{s:'bad',p:'Beef Bulgogi → house marinade v3 → minced garlic',v:V}}},
+ {id:'samgyeopsal',name:'Samgyeopsal (Pork Belly, unmarinated)',cat:'BBQ — Pork',price:16.99,
+  r:{pork:{s:'bad',p:'Samgyeopsal → pork belly',v:V},
+     wheat_triticale:{s:'cc',p:'Shared tabletop grill → marinated (wheat-soy) meats cooked on same plate',v:V,note:'Clean grill plate available on request — recorded procedure, confirm with kitchen.'},
+     gluten_celiac:{s:'cc',p:'Shared tabletop grill → gluten-containing marinades on same plate',v:V,note:'Clean grill plate available on request — confirm with kitchen.'},
+     soy:{s:'cc',p:'Shared tabletop grill → soy-marinated meats on same plate',v:V}}},
+ {id:'galbi',name:'Galbi (Marinated Short Rib)',cat:'BBQ — Beef',price:24.99,
+  r:{soy:{s:'bad',p:'Galbi → galbi marinade → soy sauce (Brand A) → contains soy',v:V},
+     wheat_triticale:{s:'bad',p:'Galbi → galbi marinade → soy sauce (Brand A) → contains wheat',v:V},
+     gluten_celiac:{s:'bad',p:'Galbi → galbi marinade → soy sauce (Brand A) → wheat = gluten source',v:V},
+     sesame:{s:'bad',p:'Galbi → galbi marinade → sesame oil (Brand B)',v:V},
+     garlic:{s:'bad',p:'Galbi → galbi marinade → minced garlic',v:V}}},
+ {id:'japchae',name:'Japchae (Glass Noodles)',cat:'Noodles & Rice',price:14.5,
+  r:{soy:{s:'bad',p:'Japchae → seasoning → soy sauce (Brand A) → contains soy',v:V},
+     sesame:{s:'bad',p:'Japchae → sesame oil finish (Brand B)',v:V},
+     crustaceans_molluscs:{s:'mod',p:'Japchae → shrimp garnish (optional component)',v:V,note:'Modification: omit shrimp garnish — verified removable. All remaining components pass.'},
+     gluten_celiac:{s:'ok',p:'Sweet-potato glass noodles → supplier label: no gluten source recorded',v:V}}},
+ {id:'kimchijjigae',name:'Kimchi Jjigae (Kimchi Stew)',cat:'Stews & Soups',price:15.0,
+  r:{fish:{s:'bad',p:'Kimchi Jjigae → house kimchi → fish sauce (Brand C) → contains anchovy (fish)',v:V},
+     soy:{s:'bad',p:'Kimchi Jjigae → doenjang (Brand D) → contains soy',v:V},
+     pork:{s:'mod',p:'Kimchi Jjigae → sliced pork (standard component)',v:V,note:'Modification: prepare without pork — recorded alternate preparation, confirm with kitchen.'},
+     sulphites:{s:'unk',p:'House kimchi → chili flake blend (Brand E) → label not yet transcribed',v:'Record incomplete — supplier label pending review (demo)'}}},
+ {id:'pajeon',name:'Haemul Pajeon (Seafood Pancake)',cat:'Shareables',price:16.5,
+  r:{wheat_triticale:{s:'bad',p:'Pajeon batter → wheat flour',v:V},
+     gluten_celiac:{s:'bad',p:'Pajeon batter → wheat flour → gluten source',v:V},
+     egg:{s:'bad',p:'Pajeon batter → egg',v:V},
+     crustaceans_molluscs:{s:'bad',p:'Haemul Pajeon → shrimp, squid → crustaceans & molluscs',v:V},
+     fish:{s:'cc',p:'Shared prep station → seafood handling area',v:V}}},
+ {id:'mandu',name:'Fried Mandu (Dumplings)',cat:'Shareables',price:9.5,
+  r:{wheat_triticale:{s:'bad',p:'Mandu wrapper → wheat flour',v:V},
+     gluten_celiac:{s:'bad',p:'Mandu wrapper → wheat flour → gluten source',v:V},
+     egg:{s:'bad',p:'Mandu filling → egg binder',v:V},
+     soy:{s:'bad',p:'Mandu filling → seasoned tofu → soy',v:V},
+     pork:{s:'bad',p:'Mandu filling → ground pork',v:V},
+     sesame:{s:'cc',p:'Fryer #1 (shared oil) → also fries sesame-coated items',v:V}}},
+ {id:'tteokbokki',name:'Tteokbokki (Spicy Rice Cakes)',cat:'Shareables',price:12.0,
+  r:{soy:{s:'bad',p:'Tteokbokki sauce → gochujang (Brand F) → contains soy',v:V},
+     wheat_triticale:{s:'may',p:'Gochujang (Brand F) → label: “may contain wheat” (supplier precaution)',v:V},
+     gluten_celiac:{s:'may',p:'Gochujang (Brand F) → supplier “may contain wheat” precaution',v:V},
+     fish:{s:'bad',p:'Tteokbokki broth → anchovy stock',v:V}}},
+ {id:'bibimbap',name:'Dolsot Bibimbap',cat:'Noodles & Rice',price:15.5,
+  r:{egg:{s:'mod',p:'Bibimbap → fried egg topping (optional component)',v:V,note:'Modification: omit egg — verified removable. Remaining components pass.'},
+     sesame:{s:'bad',p:'Bibimbap → sesame oil + sesame seed garnish',v:V},
+     soy:{s:'bad',p:'Bibimbap → gochujang (Brand F) → contains soy',v:V},
+     wheat_triticale:{s:'may',p:'Gochujang (Brand F) → “may contain wheat”',v:V}}},
+ {id:'naengmyeon',name:'Mul Naengmyeon (Cold Noodles)',cat:'Noodles & Rice',price:14.0,
+  r:{wheat_triticale:{s:'bad',p:'Naengmyeon noodles → wheat + buckwheat flour',v:V},
+     gluten_celiac:{s:'bad',p:'Naengmyeon noodles → wheat flour → gluten source',v:V},
+     mustard:{s:'mod',p:'Served with hot mustard sauce on side (optional)',v:V,note:'Modification: serve without mustard — verified removable.'},
+     egg:{s:'mod',p:'Boiled egg topping (optional component)',v:V,note:'Modification: omit egg — verified removable.'}}},
+ {id:'rice',name:'Steamed Rice',cat:'Noodles & Rice',price:2.5,r:{}},
+ {id:'kimchi',name:'House Kimchi (side)',cat:'Banchan',price:4.0,
+  r:{fish:{s:'bad',p:'House kimchi → fish sauce (Brand C) → contains anchovy (fish)',v:V},
+     sulphites:{s:'unk',p:'Chili flake blend (Brand E) → supplier label not yet transcribed',v:'Record incomplete (demo)'},
+     garlic:{s:'bad',p:'House kimchi → garlic',v:V}}},
+ {id:'banchan',name:'Rotating Banchan Plate',cat:'Banchan',price:6.0,allUnk:true,r:{},
+  unote:'Banchan rotates daily; today’s items have not been recorded and verified. Treated as unknown for every restriction.'},
+ {id:'twigim',name:'Yachae Twigim (Vegetable Fritters)',cat:'Shareables',price:8.5,
+  r:{wheat_triticale:{s:'bad',p:'Twigim batter → wheat flour',v:V},
+     gluten_celiac:{s:'bad',p:'Twigim batter → wheat flour → gluten source',v:V},
+     sesame:{s:'cc',p:'Fryer #1 (shared oil) → also fries sesame-coated items',v:V},
+     egg:{s:'may',p:'Batter mix (Brand G) → label: “may contain egg”',v:V}}},
+];
+
+const S={
+ ok:{sev:0,cls:'b-ok',sx:'sx-ok',icon:'✓',label:'No recorded conflict'},
+ mod:{sev:1,cls:'b-mod',sx:'sx-mod',icon:'🔧',label:'Can be modified — confirm with kitchen'},
+ unk:{sev:2,cls:'b-unk',sx:'sx-unk',icon:'?',label:'Ingredient data incomplete'},
+ may:{sev:3,cls:'b-cc',sx:'sx-cc',icon:'!',label:'Supplier “may contain” precaution'},
+ cc:{sev:4,cls:'b-cc',sx:'sx-cc',icon:'!',label:'Cross-contact risk recorded'},
+ bad:{sev:5,cls:'b-bad',sx:'sx-bad',icon:'✕',label:'Contains / conflicts'},
+};
+const TABS=[
+ {id:'avoid', cls:'tb-bad', name:"Can't eat", sts:['bad','cc','may','unk'],
+  note:'⬢✕ Everything with a recorded conflict, cross-contact risk, supplier precaution, or incomplete data — the conservative list.'},
+ {id:'ok', cls:'tb-ok', name:'No conflict', sts:['ok'],
+  note:'○✓ No recorded conflict for every selected restriction. Not a guarantee — recorded data only.'},
+ {id:'mod', cls:'tb-mod', name:'Modifiable', sts:['mod'],
+  note:'◇🔧 Eligible only with the listed change — always confirm the modification with the kitchen.'},
+ {id:'unk', cls:'tb-unk', name:'Unverified', sts:['unk'],
+  note:'▢? Ingredient or preparation data incomplete or not recently verified. Unknown is never treated as safe.'},
+ {id:'all', cls:'tb-all', name:'All', sts:['bad','cc','may','unk','mod','ok'],
+  note:'Every dish, worst recorded status first.'},
+];
+
+let selected=new Set(), rquery='', tab='avoid', openDish=null;
+
+const io=('IntersectionObserver' in window)?new IntersectionObserver(es=>{
+  es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});
+},{threshold:.06}):null;
+function reveal(scope){scope.querySelectorAll('.rv:not(.in)').forEach((el,i)=>{
+  el.style.transitionDelay=(Math.min(i,10)*30)+'ms'; io?io.observe(el):el.classList.add('in');});}
+
+function cell(d,rid){
+  if(d.allUnk) return {s:'unk',p:d.name+' → rotating items not recorded today',v:'Not verified (demo)'};
+  return d.r[rid] || {s:'ok',p:d.name+' → all recorded components → no declaration for this restriction',v:V};
+}
+function agg(d){let w='ok';for(const rid of selected){const c=cell(d,rid);if(S[c.s].sev>S[w].sev)w=c.s;}return w;}
+function worstReason(d){
+  let w=null,wr=null;
+  for(const rid of selected){const c=cell(d,rid);if(!w||S[c.s].sev>S[w.s].sev){w=c;wr=rid;}}
+  if(!w)return '';
+  const r=RESTRICTIONS.find(x=>x.id===wr);
+  return `${S[w.s].label} · ${r.name}`;
+}
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+
+/* ---------- screen 1 ---------- */
+function renderGrid(){
+  const el=document.getElementById('grid');
+  const q=rquery.trim().toLowerCase();
+  const list=RESTRICTIONS.filter(r=>!q||r.name.toLowerCase().includes(q)||(r.kw||'').includes(q)||r.g.toLowerCase().includes(q));
+  el.innerHTML=list.length===0
+   ? `<div class="gempty" style="grid-column:1/-1">No match for “${esc(rquery)}”. Custom restrictions are added in the admin tool in the real app.</div>`
+   : list.map(r=>`<button class="rcard rv" aria-pressed="${selected.has(r.id)}" data-r="${r.id}">
+      <span class="tick" aria-hidden="true">✓</span>
+      <span class="ric" aria-hidden="true">${r.ic}</span>
+      <span class="rnm">${r.name}</span>
+      <span class="rgk">${r.g}</span></button>`).join('');
+  el.querySelectorAll('.rcard').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.r; selected.has(id)?selected.delete(id):selected.add(id); syncS1();
+    b.setAttribute('aria-pressed',selected.has(id));
+  });
+  reveal(el);
+}
+function syncS1(){
+  document.getElementById('cnt1').innerHTML=`<b>${selected.size}</b> selected`;
+  document.getElementById('go').disabled=selected.size===0;
+}
+
+/* ---------- screen 2 ---------- */
+function renderResults(){
+  document.getElementById('selsum').innerHTML=[...selected].map(rid=>{
+    const r=RESTRICTIONS.find(x=>x.id===rid);
+    return `<span class="spill">${r.ic} ${r.name}</span>`;}).join('');
+  const buckets={}; Object.keys(S).forEach(k=>buckets[k]=[]);
+  DISHES.forEach(d=>buckets[agg(d)].push(d));
+  const count=t=>t.sts.reduce((n,s)=>n+buckets[s].length,0);
+  document.getElementById('tabs').innerHTML=TABS.map(t=>
+    `<button class="tab ${t.cls}" role="tab" aria-selected="${tab===t.id}" data-t="${t.id}">${t.name} <span class="n">(${count(t)})</span></button>`).join('');
+  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{tab=b.dataset.t;renderResults();});
+  const T=TABS.find(t=>t.id===tab);
+  document.getElementById('tabnote').textContent=T.note;
+  const list=T.sts.flatMap(s=>buckets[s].map(d=>({d,s})));
+  if(tab==='all') list.sort((a,b)=>S[b.s].sev-S[a.s].sev);
+  document.getElementById('rows').innerHTML=list.length===0
+   ? `<div class="gempty">Nothing in this tab for the current selection.</div>`
+   : list.map(({d,s})=>`<button class="row rv" data-d="${d.id}">
+      <span class="stx ${S[s].sx}" aria-label="${S[s].label}">${S[s].icon}</span>
+      <span><span class="nm">${d.name}</span><br><span class="why">${esc(worstReason(d))} · tap for why</span></span>
+      <span class="pr">$${d.price.toFixed(2)}</span></button>`).join('');
+  document.querySelectorAll('.row').forEach(b=>b.onclick=()=>{openDish=b.dataset.d;renderSheet();});
+  reveal(document.getElementById('rows'));
+}
+
+function renderSheet(){
+  const slot=document.getElementById('sheetSlot');
+  if(!openDish){slot.innerHTML='';return;}
+  const d=DISHES.find(x=>x.id===openDish);
+  const cards=[...selected].map(rid=>{
+    const c=cell(d,rid); const r=RESTRICTIONS.find(x=>x.id===rid); const m=S[c.s];
+    const path=esc(c.p).split(' → ').map((seg,i,a)=>i===a.length-1?`<b>${seg}</b>`:seg).join('<span class="arr">→</span>');
+    return `<div class="rescard">
+      <div class="rt"><span class="b ${m.cls}">${m.icon} ${m.label}</span><span style="color:var(--ink3);font-weight:700;font-size:12px">for ${r.ic} ${r.name}</span></div>
+      <div class="path">${path}</div>
+      ${c.note?`<div class="note">🔧 ${esc(c.note)}</div>`:''}
+      <div class="vdate">${esc(c.v)}</div></div>`;}).join('');
+  slot.innerHTML=`<div class="scrim" id="scrim"></div><div class="sheet" role="dialog" aria-label="Dish detail"><div class="inner">
+    <button class="dclose" id="dclose" aria-label="Close">✕</button>
+    <h2>${d.name}</h2>
+    <div class="meta">${d.cat} · $${d.price.toFixed(2)} <span style="color:var(--ok)">· Available</span></div>
+    ${d.unote?`<div class="rescard"><div class="note">▢? ${esc(d.unote)}</div></div>`:''}
+    <div class="kv">Why — per selected restriction</div>${cards}
+    <div class="confirm">△ <b>Confirm with the kitchen before advising the guest.</b> Recorded data, not a guarantee.</div>
+  </div></div>`;
+  const close=()=>{openDish=null;renderSheet();};
+  document.getElementById('dclose').onclick=close;
+  document.getElementById('scrim').onclick=close;
+}
+
+/* ---------- navigation ---------- */
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));
+  document.querySelector('#'+id+' .content').scrollTop=0;}
+document.getElementById('rq').addEventListener('input',e=>{rquery=e.target.value;renderGrid();});
+document.getElementById('go').onclick=()=>{if(selected.size){tab='avoid';renderResults();show('s2');}};
+document.getElementById('back').onclick=()=>{renderGrid();syncS1();show('s1');};
+document.getElementById('reset').onclick=()=>{selected=new Set();rquery='';tab='avoid';openDish=null;
+  document.getElementById('rq').value='';renderSheet();renderGrid();syncS1();show('s1');};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&openDish){openDish=null;renderSheet();}});
+renderGrid();syncS1();
+</script>
+</body></html>
